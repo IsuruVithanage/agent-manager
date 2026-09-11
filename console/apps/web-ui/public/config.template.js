@@ -51,7 +51,6 @@ window.__RUNTIME_CONFIG__ = {
     ...('$AUTH_RESOURCE'.trim() && {
       signInOptions: { resource: '$AUTH_RESOURCE'.trim() },
     }),
-    platform: 'AsgardeoV2',
     tokenValidation: {
       idToken: {
         validate: '$VALIDATE_ID_TOKEN' === 'true',
