@@ -135,6 +135,7 @@ const sidebars: SidebarsConfig = {
           id: 'tutorials/observe-first-agent',
           label: 'Monitoring an Agent',
         },
+        'tutorials/sample-agents',
       ],
     },
     {
