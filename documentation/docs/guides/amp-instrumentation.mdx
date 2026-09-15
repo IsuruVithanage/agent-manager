@@ -282,8 +282,6 @@ Operators: see [Instrumentation Catalog](./instrumentation-catalog.mdx) for how 
 
 The zero-code path instruments a fixed set of agent frameworks, shipped inside the Traceloop SDK that each AMP-instrumentation version pins. **The framework set is the same across all AMP-instrumentation versions and all supported Python versions.** The only difference is LiteLLM, which is absent from 0.3.0 and present from 0.4.0 onward. So you don't need to pick a specific version to get a specific framework.
 
-What does vary is how far each framework has been verified. The sections below separate what is tested from what merely ships.
-
 ### Verified frameworks
 
 These are exercised on every release by the [instrumentation matrix test suite](https://github.com/wso2/agent-manager/tree/main/test/instrumentation-matrix), which asserts the exact span kinds listed:
@@ -300,19 +298,5 @@ These are exercised on every release by the [instrumentation matrix test suite](
 :::warning CrewAI 1.14 and later will not install alongside the pinned SDK
 CrewAI 1.14 tightened its `opentelemetry-api` pin to a range that conflicts with the Traceloop SDK's own requirement, so dependency resolution fails outright rather than degrading. You see a resolver error at install time, not a missing-traces symptom at runtime. Stay on 1.1.x until this is resolved upstream.
 :::
-
-### Shipped but not yet verified
-
-These instrumentations are installed and will attempt to emit spans, but have no coverage in the matrix test suite. Treat them as best-effort:
-
-- Haystack
-- OpenAI Agents SDK
-- Agno
-- LiteLLM (0.4.0 and later only)
-- MCP
-
-### Not instrumented
-
-`strands-agents` has no instrumentation package in any AMP-instrumentation version. Agents built on it produce no automatic traces. Use the [manual instrumentation](#manual-instrumentation) path instead.
 
 The canonical source for the verified-framework list is [`test/instrumentation-matrix/matrix.yaml`](https://github.com/wso2/agent-manager/blob/main/test/instrumentation-matrix/matrix.yaml); known limitations are tracked in [`FINDINGS.md`](https://github.com/wso2/agent-manager/blob/main/test/instrumentation-matrix/FINDINGS.md) alongside it.
