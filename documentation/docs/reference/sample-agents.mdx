@@ -1,7 +1,3 @@
----
-sidebar_position: 3
----
-
 # Sample Agents
 
 The repository ships seven runnable agents under [`samples/`](https://github.com/wso2/agent-manager/tree/main/samples), each demonstrating a different framework and a different way of getting traces into the Agent Manager. Start from whichever one is closest to what you are building rather than from an empty directory.
@@ -32,7 +28,7 @@ Every sample needs an LLM key, and all the Python samples target Python 3.11:
 export OPENAI_API_KEY="your-key"
 ```
 
-Most samples are **Platform-Hosted**, meaning you point the Agent Manager at the sample's directory and it builds and runs the agent for you. Follow [Create Your First Agent](./create-your-first-agent.mdx) and set **App Path** to the path given below for each sample. Two samples run on your own machine as **Externally-Hosted** agents instead, and say so.
+Most samples are **Platform-Hosted**, meaning you point the Agent Manager at the sample's directory and it builds and runs the agent for you. Follow [Create Your First Agent](../tutorials/create-your-first-agent.mdx) and set **App Path** to the path given below for each sample. Two samples run on your own machine as **Externally-Hosted** agents instead, and say so.
 
 No sample uses MCP tools. To see those, follow [Configure Agent MCP Proxies](../guides/configure-agent-mcp-proxies.mdx) separately.
 
@@ -183,7 +179,7 @@ Note there is no `amp-instrument` prefix here. That wrapper is for the automatic
 
 | Topic | Guide |
 |---|---|
-| Deploy one of these into your own environment | [Create Your First Agent](./create-your-first-agent.mdx) |
-| See the traces a sample produces | [Observe Your First Agent](./observe-first-agent.mdx) |
+| Deploy one of these into your own environment | [Create Your First Agent](../tutorials/create-your-first-agent.mdx) |
+| See the traces a sample produces | [Observe Your First Agent](../tutorials/observe-first-agent.mdx) |
 | Instrument an agent of your own | [AMP Instrumentation](../guides/amp-instrumentation.mdx) |
 | Score agent behaviour automatically | [Evaluation Monitors](../guides/evaluation-monitors.mdx) |

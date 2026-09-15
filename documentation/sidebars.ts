@@ -135,7 +135,6 @@ const sidebars: SidebarsConfig = {
           id: 'tutorials/observe-first-agent',
           label: 'Monitoring an Agent',
         },
-        'tutorials/sample-agents',
       ],
     },
     {
@@ -177,6 +176,7 @@ const sidebars: SidebarsConfig = {
             'reference/helm-charts/wso2-amp-platform-resources-extension',
           ],
         },
+        'reference/sample-agents',
         'reference/mcp-server',
         'reference/observer-mcp-server',
         'reference/authorization',
