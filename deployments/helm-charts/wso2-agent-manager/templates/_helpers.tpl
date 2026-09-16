@@ -129,6 +129,46 @@ values.yaml for why it is derived.
 {{- end }}
 
 {{/*
+Fails the render when the console's resource indicator names an audience the
+service will not accept.
+
+AUTH_RESOURCE becomes the aud claim of every console token, and the service
+refuses a token whose aud matches no KEY_MANAGER_AUDIENCE entry — so a resource
+the audience list does not cover yields a console that authenticates fine and
+then 401s on every API request. The shipped defaults agree; this catches an
+operator who changes one side and not the other.
+
+Deliberately a check and not a derivation: the audience list carries entries the
+console has nothing to do with (amp-publisher-*, amctl, am-mcp, the MCP server
+URL), so computing it from the resource would drop them.
+
+Match rules mirror validateAudience: exact, or a trailing "*" matching by prefix.
+A bare "*" is not treated as a match — the service rejects that as a
+configuration error rather than honouring it.
+
+Skipped when the service is not part of this release, since its audience list is
+then not ours to know.
+*/}}
+{{- define "agent-management-platform.console.validateResource" -}}
+{{- $resource := .Values.console.config.auth.resource | default "" | trim -}}
+{{- if and $resource .Values.agentManagerService.enabled -}}
+{{- $allowed := include "agent-management-platform.agentManagerService.audience" . | splitList "," -}}
+{{- $matched := false -}}
+{{- range $allowed -}}
+{{- $entry := . | trim -}}
+{{- if eq $entry $resource -}}
+{{- $matched = true -}}
+{{- else if and (hasSuffix "*" $entry) (ne $entry "*") (hasPrefix (trimSuffix "*" $entry) $resource) -}}
+{{- $matched = true -}}
+{{- end -}}
+{{- end -}}
+{{- if not $matched -}}
+{{- fail (printf "console.config.auth.resource %q is not covered by agentManagerService.config.keyManager.audience (%s). The console's tokens would carry aud=%s and be rejected on every API request. Add it to the audience list, or clear console.config.auth.resource to keep the token audience as the client id." $resource (include "agent-management-platform.agentManagerService.audience" .) $resource) -}}
+{{- end -}}
+{{- end -}}
+{{- end }}
+
+{{/*
 ==============================================
 Console Helpers
 ==============================================

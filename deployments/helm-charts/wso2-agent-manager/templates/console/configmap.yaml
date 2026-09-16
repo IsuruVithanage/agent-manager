@@ -1,4 +1,5 @@
 {{- if .Values.console.enabled }}
+{{- include "agent-management-platform.console.validateResource" . }}
 apiVersion: v1
 kind: ConfigMap
 metadata:

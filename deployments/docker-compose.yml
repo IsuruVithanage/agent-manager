@@ -84,7 +84,14 @@ services:
       # Last entry is SERVER_PUBLIC_URL above plus "/mcp" (no trailing slash,
       # per the MCP spec's canonical-URI guidance) — an MCP token's `aud`.
       # The Helm charts derive this; here it moves by hand.
-      - KEY_MANAGER_AUDIENCE=urn:wso2:amp,localhost,amp-publisher-*,amp-api-client,amp-console-client,amctl,am-mcp,http://localhost:9000/mcp
+      # Leads with AUTH_RESOURCE so the console's resource indicator is always an
+      # audience this service accepts. AUTH_RESOURCE becomes the aud of every
+      # console token, and a token whose aud is not listed here is refused — so
+      # pointing the console at a different resource server without this would
+      # authenticate fine and then 401 on every API call. Additive, not a
+      # substitution: every entry below is kept, and the duplicate when
+      # AUTH_RESOURCE is left at its default is harmless.
+      - KEY_MANAGER_AUDIENCE=${AUTH_RESOURCE:-urn:wso2:amp},urn:wso2:amp,localhost,amp-publisher-*,amp-api-client,amp-console-client,amctl,am-mcp,http://localhost:9000/mcp
       - AMP_VERSION=v0.8.0
       - OPEN_CHOREO_BASE_URL=http://api.openchoreo.localhost:8195
       # OpenBao/Vault Secret Management Configuration
