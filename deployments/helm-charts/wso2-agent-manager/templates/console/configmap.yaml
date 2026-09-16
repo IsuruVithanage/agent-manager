@@ -10,6 +10,11 @@ data:
   AUTH_CLIENT_ID: {{ .Values.console.config.auth.clientId | quote }}
   AUTH_BASE_URL: {{ .Values.console.config.auth.baseUrl | quote }}
   AUTH_SCOPES: {{ .Values.console.config.auth.scopes | default "openid profile email" | quote }}
+  # RFC 8707 resource indicator sent on /oauth2/authorize. Set to the amp resource
+  # server identifier to have the token carry the amp: permission scopes; empty
+  # keeps the token audience as AUTH_CLIENT_ID. Must stay in sync with the
+  # agentManagerService keyManager audience allowlist, which has to accept it.
+  AUTH_RESOURCE: {{ .Values.console.config.auth.resource | default "" | quote }}
   SIGN_IN_REDIRECT_URL: {{ .Values.console.config.auth.signInRedirectURL | quote }}
   SIGN_OUT_REDIRECT_URL: {{ .Values.console.config.auth.signOutRedirectURL | quote }}
   VALIDATE_ID_TOKEN: {{ .Values.console.config.auth.validateIDToken | quote }}
