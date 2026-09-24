@@ -280,7 +280,7 @@ Operators: see [Instrumentation Catalog](./instrumentation-catalog.mdx) for how 
 
 ## Agent framework compatibility
 
-AMP collects spans from frameworks instrumented by the Traceloop SDK and from frameworks, such as Strands, that emit their own OpenTelemetry spans into AMP's tracer provider. The matrix below lists the framework versions tested with AMP instrumentation.
+The zero-code path instruments a fixed set of agent frameworks, shipped inside the Traceloop SDK that each AMP-instrumentation version pins. **The framework set is the same across every AMP-instrumentation version and every supported Python version**, so you do not need to pick a particular version to get a particular framework.
 
 ### Verified frameworks
 
@@ -294,7 +294,6 @@ These are covered by the [instrumentation matrix test suite](https://github.com/
 | CrewAI | 1.1.0 | LLM, Agent, Task | No tool spans are emitted; 1.14.5 fails to install on instrumentation 0.3.0 (see below) |
 | OpenAI (direct SDK) | 2.38.0 | LLM | — |
 | Anthropic (direct SDK) | 0.45.0 | LLM | — |
-| Strands Agents | 1.55.1 | Agent, Chain, LLM, Tool | Tested with OpenAI and a local tool; Bedrock and MCP are not covered |
 
 :::warning CrewAI 1.14.5 does not install on AMP instrumentation 0.3.0
 `crewai 1.14.5` requires `opentelemetry-api >=1.34,<1.35`, while the `traceloop-sdk 0.61.0` that AMP instrumentation 0.3.0 pins requires `>=1.38,<2`. Installing both fails with `ResolutionImpossible` at install time rather than degrading at runtime.
