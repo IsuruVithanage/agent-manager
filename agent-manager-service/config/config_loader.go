@@ -123,7 +123,7 @@ func loadEnvs() {
 		SDKVolumeName: r.readOptionalString("OTEL_SDK_VOLUME_NAME", "otel-tracing-sdk-volume"),
 		SDKMountPath:  r.readOptionalString("OTEL_SDK_MOUNT_PATH", "/otel-tracing-sdk"),
 
-		DefaultInstrumentationVersion: r.readOptionalString("OTEL_DEFAULT_INSTRUMENTATION_VERSION", "0.4.1"),
+		DefaultInstrumentationVersion: r.readOptionalString("OTEL_DEFAULT_INSTRUMENTATION_VERSION", "0.4.2"),
 
 		InstrumentationExtensionPath: r.readOptionalString("INSTRUMENTATION_EXTENSION_PATH", "/etc/amp/instrumentation-extension.yaml"),
 
@@ -153,6 +153,14 @@ func loadEnvs() {
 
 	config.InstrumentationURL = r.readOptionalString("INSTRUMENTATION_URL", "http://default-default.gateway.localhost:19080/otel")
 	config.DefaultGatewayPort = int(r.readOptionalInt64("DEFAULT_GATEWAY_PORT", 19080))
+	config.A2ACardFetchDialAddr = r.readOptionalString("A2A_CARD_FETCH_DIAL_ADDR", "")
+	if addr := config.A2ACardFetchDialAddr; addr != "" {
+		if host, port, err := net.SplitHostPort(addr); err != nil {
+			r.errors = append(r.errors, fmt.Errorf("A2A_CARD_FETCH_DIAL_ADDR must be host:port: %w", err))
+		} else if host == "" || port == "" {
+			r.errors = append(r.errors, fmt.Errorf("A2A_CARD_FETCH_DIAL_ADDR must contain a non-empty host and port"))
+		}
+	}
 	config.KeyManagerConfigurations = KeyManagerConfigurations{
 		// Comma-separated list of allowed issuers and audiences
 		Issuer:   r.readOptionalStringList("KEY_MANAGER_ISSUER", "Agent Management Platform Local"),
@@ -166,6 +174,7 @@ func loadEnvs() {
 		ConsoleEnabled:            r.readOptionalBool("CONSOLE_ANALYTICS_ENABLED", true),
 		MoesifCollectorBaseURL:    r.readOptionalString("MOESIF_COLLECTOR_BASE_URL", ""),
 		MoesifCollectorHostHeader: r.readOptionalString("MOESIF_COLLECTOR_HOST_HEADER", ""),
+		MoesifApplicationID:       strings.TrimSpace(r.readOptionalString("MOESIF_APPLICATION_ID", "")),
 		DeploymentModel:           r.readOptionalString("AMP_DEPLOYMENT_MODEL", "saas"),
 		Environment:               r.readOptionalString("AMP_ENVIRONMENT", ""),
 	}
@@ -620,6 +629,12 @@ func validateGrowthAnalyticsConfig(cfg *Config) {
 		warned = true
 	}
 
+	// With an Application ID the obvious target is Moesif itself, so an
+	// unset URL means "send straight to Moesif" rather than "disabled".
+	if cfg.GrowthAnalytics.MoesifApplicationID != "" && cfg.GrowthAnalytics.MoesifCollectorBaseURL == "" {
+		cfg.GrowthAnalytics.MoesifCollectorBaseURL = defaultMoesifAPIBaseURL
+	}
+
 	switch cfg.GrowthAnalytics.MoesifCollectorBaseURL {
 	case "":
 		if cfg.GrowthAnalytics.MoesifCollectorHostHeader != "" {
@@ -639,10 +654,29 @@ func validateGrowthAnalyticsConfig(cfg *Config) {
 		case u.Host == "":
 			disable("MOESIF_COLLECTOR_BASE_URL must have a non-empty host",
 				"url", cfg.GrowthAnalytics.MoesifCollectorBaseURL)
+		case cfg.GrowthAnalytics.MoesifApplicationID != "" && u.Scheme != "https" && !isLoopbackHost(u.Hostname()):
+			// The Application ID is a credential; never send it in cleartext
+			// beyond this machine.
+			disable("MOESIF_COLLECTOR_BASE_URL must use https when MOESIF_APPLICATION_ID is set",
+				"url", cfg.GrowthAnalytics.MoesifCollectorBaseURL)
 		}
 	}
 
 	logGrowthAnalyticsState(cfg.GrowthAnalytics, warned)
+}
+
+// defaultMoesifAPIBaseURL is Moesif's public collection API, used when an
+// Application ID is configured without a collector URL.
+const defaultMoesifAPIBaseURL = "https://api.moesif.net"
+
+// isLoopbackHost reports whether host is localhost or a loopback IP, the only
+// places an Application ID may be sent over plain http (local proxies, tests).
+func isLoopbackHost(host string) bool {
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }
 
 // logGrowthAnalyticsState records, once at startup, whether feature-usage
@@ -657,10 +691,11 @@ func logGrowthAnalyticsState(ga GrowthAnalyticsConfig, alreadyWarned bool) {
 	case !ga.Enabled:
 		slog.Info("growthanalytics: feature-usage tracking disabled (MOESIF_ENABLED is false)")
 	case ga.MoesifCollectorBaseURL == "":
-		slog.Info("growthanalytics: feature-usage tracking disabled (MOESIF_COLLECTOR_BASE_URL is unset)")
+		slog.Info("growthanalytics: feature-usage tracking disabled (neither MOESIF_APPLICATION_ID nor MOESIF_COLLECTOR_BASE_URL is set)")
 	default:
 		slog.Info("growthanalytics: feature-usage tracking enabled",
 			"collector", ga.MoesifCollectorBaseURL,
+			"auth", growthAnalyticsAuthMode(ga),
 			"environment", ga.Environment,
 			"deploymentModel", ga.DeploymentModel,
 			"consoleActions", ga.ConsoleEnabled)
@@ -669,6 +704,14 @@ func logGrowthAnalyticsState(ga GrowthAnalyticsConfig, alreadyWarned bool) {
 				"endpoint feature-usage events are unaffected")
 		}
 	}
+}
+
+// growthAnalyticsAuthMode names the credential in use without revealing it.
+func growthAnalyticsAuthMode(ga GrowthAnalyticsConfig) string {
+	if ga.MoesifApplicationID != "" {
+		return "moesif-application-id"
+	}
+	return "caller-jwt"
 }
 
 func validateInternalServerConfigs(cfg *Config, r *configReader) {

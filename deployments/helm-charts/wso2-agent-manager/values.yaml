@@ -214,7 +214,7 @@ agentManagerService:
       # Platform default AMP instrumentation version. Must exist in the
       # effective catalog (embedded baseline ∪ additionalInstrumentationVersions);
       # otherwise the server fails to start.
-      defaultInstrumentationVersion: "0.4.1"
+      defaultInstrumentationVersion: "0.4.2"
       # Operator-supplied catalog extension entries, added on top of the
       # bundled baseline. For air-gapped installs, point imageRepository
       # at the internal mirror.
@@ -308,6 +308,31 @@ agentManagerService:
       token: ""
       existingSecret: ""
       existingSecretKey: "github-token"
+
+    # Growth analytics: feature-usage events and console actions sent to
+    # Moesif. This codebase is SaaS/cloud-first, so both switches default to
+    # on; nothing is exported until a destination is configured (a collector
+    # URL or an application ID). Set enabled to false to turn it all off.
+    growthAnalytics:
+      # Master switch (MOESIF_ENABLED).
+      enabled: true
+      # Console UI action stream; also needs enabled (CONSOLE_ANALYTICS_ENABLED).
+      consoleEnabled: true
+      # Events endpoint base URL (a collector proxy or Moesif itself). Leave
+      # empty with an application ID to send
+      # straight to https://api.moesif.net; must be https for a remote host
+      # when an application ID is set.
+      collectorBaseURL: ""
+      # Host header override, only for proxies reached via a port-forward.
+      collectorHostHeader: ""
+      # Your Moesif Application ID. Set inline, or prefer existingSecret.
+      # When set it replaces the caller's JWT as the credential.
+      applicationId: ""
+      existingSecret: ""
+      existingSecretKey: "moesif-application-id"
+      # Reported on each event as deployment_model / environment.
+      deploymentModel: "saas"
+      environment: ""
     
     # OpenChoreo API configuration
     openChoreo:
@@ -541,6 +566,9 @@ console:
     # -- Base URL for the console's generated deployment-script commands.
     # Empty derives the public raw.githubusercontent.com URL from ampVersion.
     scriptBaseUrl: ""
+    # -- Base URL the evaluator AI Copilot prompt links the writing guide from.
+    # Empty derives the public raw.githubusercontent.com URL from ampVersion.
+    promptsBaseUrl: ""
     # Documentation version the console's in-product doc links point at, used as
     # the path segment after /docs/. "latest" tracks the newest released docs.
     # The release pipeline (.github/scripts/update-helm-charts.sh) pins this to

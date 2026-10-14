@@ -32,17 +32,23 @@ export const DEFAULT_FILE_MOUNT_MAX_FILE_BYTES = 1_000_000;
 
 /**
  * Parses a byte limit from runtime config. The template substitutes an unset
- * variable with an empty string, and a typo should not silently remove a
- * limit, so anything that is not a non-negative integer falls back.
+ * variable with an empty string, which means "use the default". Anything else
+ * that is not a non-negative integer also falls back, with a warning, so a
+ * mistyped value is not silently swallowed.
  */
-const readByteLimit = (raw: string | number | undefined, fallback: number): number => {
+const readByteLimit = (
+  name: string,
+  raw: string | number | undefined,
+  fallback: number,
+): number => {
   if (raw === undefined) return fallback;
-  // Trim first: Number('') is 0, so a whitespace-only value would otherwise
-  // parse as a real 0 and switch the request-size check off.
   const text = typeof raw === 'number' ? null : raw.trim();
   if (text === '') return fallback;
   const parsed = text === null ? raw as number : Number(text);
-  return Number.isInteger(parsed) && parsed >= 0 ? parsed : fallback;
+  if (Number.isInteger(parsed) && parsed >= 0) return parsed;
+  // eslint-disable-next-line no-console
+  console.warn(`Ignoring invalid ${name} "${String(raw)}"; expected a byte count. Using ${fallback}.`);
+  return fallback;
 };
 
 /**
@@ -50,7 +56,11 @@ const readByteLimit = (raw: string | number | undefined, fallback: number): numb
  * limit. Configured per deployment with MAX_REQUEST_BODY_BYTES.
  */
 export const getMaxRequestBodyBytes = (): number =>
-  readByteLimit(globalConfig?.maxRequestBodyBytes, DEFAULT_MAX_REQUEST_BODY_BYTES);
+  readByteLimit(
+    'MAX_REQUEST_BODY_BYTES',
+    globalConfig?.maxRequestBodyBytes,
+    DEFAULT_MAX_REQUEST_BODY_BYTES,
+  );
 
 /**
  * Largest file-mount content, in bytes. Configured per deployment with
@@ -58,6 +68,7 @@ export const getMaxRequestBodyBytes = (): number =>
  */
 export const getFileMountMaxFileBytes = (): number => {
   const configured = readByteLimit(
+    'FILE_MOUNT_MAX_FILE_BYTES',
     globalConfig?.fileMountMaxFileBytes,
     DEFAULT_FILE_MOUNT_MAX_FILE_BYTES,
   );

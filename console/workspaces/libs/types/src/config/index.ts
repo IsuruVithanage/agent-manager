@@ -44,6 +44,13 @@ export interface AppConfig {
    * fail — to any host serving deployments/scripts, without a trailing slash.
    */
   scriptBaseUrl?: string;
+  /**
+   * Base URL the evaluator AI Copilot prompt links the writing guide from.
+   * Empty (the default) derives the public raw.githubusercontent.com URL for the
+   * release ref. Set it where external AI assistants cannot reach GitHub, to any
+   * public host serving the console's prompts/ directory.
+   */
+  promptsBaseUrl?: string;
   disableAuth: boolean;
   instrumentationUrl: string;
   /**
@@ -90,10 +97,11 @@ export interface AppConfig {
    */
   guardrailCapabilities?: GuardrailCapabilities;
   /**
-   * Largest request body, in bytes, the console will send on a write. Sized for
-   * a WAF that rejects bigger bodies with an opaque 403, so the console can
-   * refuse first with a readable error. "0" disables the check. Arrives as a
-   * string from the runtime config template; read it via getMaxRequestBodyBytes().
+   * Largest request body, in bytes, the console will send on a write. Unset or
+   * "0" means no limit (the default). Set it on deployments behind a WAF that
+   * rejects bigger bodies with an opaque 403, so the console refuses first with
+   * a readable error. Arrives as a string from the runtime config template;
+   * read it via getMaxRequestBodyBytes().
    */
   maxRequestBodyBytes?: string | number;
   /**

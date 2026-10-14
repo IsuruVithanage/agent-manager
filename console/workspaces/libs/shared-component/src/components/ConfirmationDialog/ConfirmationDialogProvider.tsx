@@ -23,6 +23,7 @@ export interface ConfirmationEvent {
     | "info"
     | "success";
   confirmButtonText?: string;
+  cancelButtonText?: string;
   /**
    * Optional analytics labels for this confirmation. Without them the
    * cancellation is still counted, just labelled from confirmButtonText — the
@@ -35,7 +36,6 @@ export interface ConfirmationEvent {
     /** The action being confirmed, e.g. "delete", "undeploy". */
     action: string;
   };
-  cancelButtonText?: string;
 }
 
 export interface ConfirmationContextType {

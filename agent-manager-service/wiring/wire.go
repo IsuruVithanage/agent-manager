@@ -83,6 +83,9 @@ var serviceProviderSet = wire.NewSet(
 	ProvideAgentIdentityInjectionServiceWithEndpointResolver,
 	services.NewAgentThunderReconcilerService,
 	services.NewA2APublicationReconcilerService,
+	services.NewA2ACardFetcher,
+	services.NewA2ACardReconcilerService,
+	services.NewA2AAgentCardService,
 	services.NewEvaluatorManagerService,
 	services.NewEnvironmentService,
 	services.NewPlatformGatewayService,
@@ -130,6 +133,7 @@ var controllerProviderSet = wire.NewSet(
 	controllers.NewLLMProviderAPIKeyController,
 	controllers.NewLLMProxyAPIKeyController,
 	controllers.NewAgentAPIKeyController,
+	controllers.NewA2AAgentCardController,
 	controllers.NewLLMProxyDeploymentController,
 	controllers.NewMCPProxyController,
 	ProvideWebSocketController,
@@ -375,6 +379,7 @@ var repositoryProviderSet = wire.NewSet(
 	repositories.NewMCPProxyEndpointRepository,
 	ProvideDeploymentRepository,
 	ProvideA2APublicationRepository,
+	ProvideA2AAgentCardRepository,
 	ProvideArtifactRepository,
 	ProvideScoreRepository,
 	ProvideCatalogRepository,
@@ -486,6 +491,10 @@ func ProvideMCPProxyRepository(db *gorm.DB) repositories.MCPProxyRepository {
 
 func ProvideDeploymentRepository(db *gorm.DB) repositories.DeploymentRepository {
 	return repositories.NewDeploymentRepo(db)
+}
+
+func ProvideA2AAgentCardRepository(db *gorm.DB) repositories.A2AAgentCardRepository {
+	return repositories.NewA2AAgentCardRepository(db)
 }
 
 func ProvideA2APublicationRepository(db *gorm.DB) repositories.A2APublicationRepository {

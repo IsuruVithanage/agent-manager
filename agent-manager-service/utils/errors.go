@@ -86,14 +86,18 @@ func IsValidationError(err error) *ValidationError {
 
 var (
 	// Resource not found errors
-	ErrProjectNotFound             = errors.New("project not found")
-	ErrAgentAlreadyExists          = errors.New("agent already exists")
-	ErrAgentNotFound               = errors.New("agent not found")
-	ErrTraitNotFound               = errors.New("trait not found")
-	ErrOrganizationNotFound        = errors.New("organization not found")
-	ErrBuildNotFound               = errors.New("build not found")
-	ErrEnvironmentNotFound         = errors.New("environment not found")
-	ErrAgentIdentityNotProvisioned = errors.New("agent identity not yet provisioned for this environment")
+	ErrProjectNotFound               = errors.New("project not found")
+	ErrAgentAlreadyExists            = errors.New("agent already exists")
+	ErrAgentNotFound                 = errors.New("agent not found")
+	ErrAgentCardNotFound             = errors.New("agent card not found")
+	ErrAgentNotDeployedInEnvironment = errors.New("agent is not deployed in this environment")
+	ErrAgentNotA2A                   = errors.New("agent is not an A2A agent")
+	ErrAgentCardSourceNotExternal    = errors.New("a card source can be set only for external A2A agents")
+	ErrTraitNotFound                 = errors.New("trait not found")
+	ErrOrganizationNotFound          = errors.New("organization not found")
+	ErrBuildNotFound                 = errors.New("build not found")
+	ErrEnvironmentNotFound           = errors.New("environment not found")
+	ErrAgentIdentityNotProvisioned   = errors.New("agent identity not yet provisioned for this environment")
 	// ErrAgentIdentityRetryNotAllowed is returned when a retry is requested for
 	// a binding whose current status is not failed. Maps to 409.
 	ErrAgentIdentityRetryNotAllowed = errors.New("agent identity binding is not in a failed state and cannot be retried")
@@ -135,6 +139,11 @@ var (
 	ErrForbidden    = errors.New("forbidden")
 	ErrNotFound     = errors.New("not found")
 	ErrConflict     = errors.New("conflict")
+	// ErrResourceBeingDeleted is returned when a create collides with a same-named
+	// resource that has been deleted but is still waiting on its cleanup finalizer.
+	// It deliberately does not wrap ErrConflict: callers that recover from a conflict
+	// by updating the existing object must not do so against one that is going away.
+	ErrResourceBeingDeleted = errors.New("a resource with this name is still being deleted")
 
 	// Server errors
 	ErrInternalServerError = errors.New("internal server error")

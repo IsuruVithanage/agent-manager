@@ -236,10 +236,9 @@ func TestTrack_ReportsConfiguredEnvironment(t *testing.T) {
 }
 
 // TestTrack_ActivatesRegardlessOfIsOnPremDeployment locks in a deliberate
-// design choice: Track does not consult IsOnPremDeployment. This codebase is
-// only ever built and deployed for the SaaS/cloud environment — there's no
-// separate on-prem build of it to guard against — so MoesifCollectorBaseURL
-// being set is the only signal that matters.
+// design choice: Track does not consult IsOnPremDeployment. Enabled plus
+// MoesifCollectorBaseURL are the only gates (both off by default), and
+// deployment_model records whether the reporting install is on-prem or SaaS.
 func TestTrack_ActivatesRegardlessOfIsOnPremDeployment(t *testing.T) {
 	cfg := config.GetConfig()
 	origOnPrem := cfg.IsOnPremDeployment
@@ -657,6 +656,7 @@ func TestClientIP(t *testing.T) {
 		{"forwarded-for wins over remote addr", "203.0.113.9:44321", "198.51.100.4", "198.51.100.4"},
 		{"first entry of a comma-separated forwarded-for", "203.0.113.9:44321", "198.51.100.4, 10.0.0.1", "198.51.100.4"},
 		{"malformed remote addr falls back to raw value", "not-a-host-port", "", "not-a-host-port"},
+		{"non-IP forwarded-for falls back to the peer", "203.0.113.9:44321", "evil<script>", "203.0.113.9"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -665,9 +665,96 @@ func TestClientIP(t *testing.T) {
 			if tt.forwardFor != "" {
 				r.Header.Set("X-Forwarded-For", tt.forwardFor)
 			}
-			if got := clientIP(r); got != tt.want {
-				t.Errorf("clientIP() = %q, want %q", got, tt.want)
+			if got := ClientIP(r); got != tt.want {
+				t.Errorf("ClientIP() = %q, want %q", got, tt.want)
 			}
 		})
+	}
+}
+
+// TestTrack_DropsEventWhenSendPoolFull: a slow collector must cost a fixed
+// number of goroutines. With every slot taken, the event is dropped without
+// being sent and the caller's response is untouched.
+func TestTrack_DropsEventWhenSendPoolFull(t *testing.T) {
+	withGrowthAnalyticsConfig(t, "http://localhost:18080/moesif-collector")
+	fs, _ := withFakeSender(t)
+
+	origSlots := eventSendSlots
+	full := make(chan struct{}, 1)
+	full <- struct{}{}
+	eventSendSlots = full
+	t.Cleanup(func() { eventSendSlots = origSlots })
+
+	tracked := Track("amp.agent-development.create-agent", nil, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusCreated)
+	})
+	w := httptest.NewRecorder()
+	tracked(w, authedRequest(http.MethodPost, "/agents"))
+
+	if w.Code != http.StatusCreated {
+		t.Errorf("status = %d, want 201", w.Code)
+	}
+	select {
+	case evt := <-fs.calls:
+		t.Fatalf("event sent despite a full send pool: %+v", evt)
+	case <-time.After(200 * time.Millisecond):
+	}
+	if len(full) != 1 {
+		t.Errorf("slot count = %d, want 1 (a dropped event must not take or release a slot)", len(full))
+	}
+}
+
+func TestRequestURI_StripsQueryAndIgnoresBogusProto(t *testing.T) {
+	r := httptest.NewRequest(http.MethodPost, "http://api.example.com/orgs/o1/agents?search=secret#frag", nil)
+	r.Header.Set("X-Forwarded-Proto", "javascript")
+
+	if got, want := requestURI(r), "http://api.example.com/orgs/o1/agents"; got != want {
+		t.Errorf("requestURI() = %q, want %q", got, want)
+	}
+
+	r.Header.Set("X-Forwarded-Proto", "https")
+	if got, want := requestURI(r), "https://api.example.com/orgs/o1/agents"; got != want {
+		t.Errorf("requestURI() = %q, want %q", got, want)
+	}
+}
+
+// TestTrack_ApplicationIDMode_SendsWithoutCallerJWT: with an Application ID the
+// caller's token is not the credential, so its absence must not drop the event.
+func TestTrack_ApplicationIDMode_SendsWithoutCallerJWT(t *testing.T) {
+	withGrowthAnalyticsConfigFull(t, config.GrowthAnalyticsConfig{
+		Enabled:                true,
+		MoesifCollectorBaseURL: "https://api.moesif.net",
+		MoesifApplicationID:    "app-id",
+		DeploymentModel:        "on-prem",
+	})
+	fs, _ := withFakeSender(t)
+
+	tracked := Track("amp.agent-development.create-agent", nil, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusCreated)
+	})
+	tracked(httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/agents", nil)) // no caller JWT
+
+	waitForEvent(t, fs)
+}
+
+// TestSharedHTTPClient_RefusesRedirects: a redirect must not carry the
+// Application ID header to another host, so the client stops at the 3xx.
+func TestSharedHTTPClient_RefusesRedirects(t *testing.T) {
+	var followed bool
+	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		followed = true
+	}))
+	t.Cleanup(target.Close)
+	origin := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, target.URL+"/v1/events", http.StatusTemporaryRedirect)
+	}))
+	t.Cleanup(origin.Close)
+
+	client := moesifcollector.NewClient(sharedHTTPClient, origin.URL, "", "", "app-id")
+	if err := client.SendEvent(context.Background(), moesifcollector.Event{}); err == nil {
+		t.Error("SendEvent() error = nil, want an error for the unfollowed redirect")
+	}
+	if followed {
+		t.Error("redirect was followed; the Application ID would have reached another host")
 	}
 }

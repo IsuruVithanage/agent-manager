@@ -10,8 +10,8 @@ import {
 import { useSnackBar } from "@agent-management-platform/views";
 import { useEffect, useRef, useCallback} from "react";
 import { useAuthHooks } from "@agent-management-platform/auth";
-import { ConsoleAction, markSessionExpired, useTrack } from "./telemetry";
 import { isRequestTooLargeError } from "../utils";
+import { ConsoleAction, markSessionExpired, useTrack } from "./telemetry";
 
 type MutationAction =
   | "assign"

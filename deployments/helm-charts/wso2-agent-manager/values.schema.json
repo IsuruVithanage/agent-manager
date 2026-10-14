@@ -791,7 +791,7 @@
                   "type": "string"
                 },
                 "defaultInstrumentationVersion": {
-                  "default": "0.4.1",
+                  "default": "0.4.2",
                   "description": "Platform default AMP instrumentation version. Must exist in the effective catalog (embedded baseline \u222a additionalInstrumentationVersions); otherwise the server fails to start.",
                   "title": "defaultInstrumentationVersion",
                   "type": "string"
@@ -1291,6 +1291,59 @@
               },
               "required": [],
               "title": "thunder",
+              "type": "object"
+            },
+            "growthAnalytics": {
+              "additionalProperties": false,
+              "description": "Growth analytics (Moesif) export. On by default in this SaaS-first codebase; nothing is exported until a collector URL or application ID is configured. Set enabled to false to turn it off.",
+              "properties": {
+                "enabled": {
+                  "default": true,
+                  "description": "Master switch (MOESIF_ENABLED).",
+                  "type": "boolean"
+                },
+                "consoleEnabled": {
+                  "default": true,
+                  "description": "Console UI action stream (CONSOLE_ANALYTICS_ENABLED); also needs enabled.",
+                  "type": "boolean"
+                },
+                "collectorBaseURL": {
+                  "default": "",
+                  "description": "Collector or Moesif API base URL. Empty with an application ID means https://api.moesif.net.",
+                  "type": "string"
+                },
+                "collectorHostHeader": {
+                  "default": "",
+                  "description": "Host header override for port-forwarded proxies.",
+                  "type": "string"
+                },
+                "applicationId": {
+                  "default": "",
+                  "description": "Moesif Application ID set inline. Prefer existingSecret.",
+                  "type": "string"
+                },
+                "existingSecret": {
+                  "default": "",
+                  "description": "Secret holding the Moesif Application ID.",
+                  "type": "string"
+                },
+                "existingSecretKey": {
+                  "default": "moesif-application-id",
+                  "description": "Key within that Secret.",
+                  "type": "string"
+                },
+                "deploymentModel": {
+                  "default": "saas",
+                  "description": "Reported as each event's deployment_model.",
+                  "type": "string"
+                },
+                "environment": {
+                  "default": "",
+                  "description": "Reported as each event's environment.",
+                  "type": "string"
+                }
+              },
+              "title": "growthAnalytics",
               "type": "object"
             }
           },
@@ -1811,6 +1864,12 @@
               "default": "http://default-default.gateway.localhost:19080/otel",
               "description": "Trace-export URL shown to external agent developers. kgateway-routed vhost \u2014 independent of the gateway runtime's namespace; no port-forward.",
               "title": "instrumentationUrl",
+              "type": "string"
+            },
+            "promptsBaseUrl": {
+              "default": "",
+              "description": "Base URL the evaluator AI Copilot prompt links the writing guide from. Empty derives the public raw.githubusercontent.com URL from ampVersion. Set it where external AI assistants cannot reach GitHub, to any public host serving the console's prompts/ directory.",
+              "title": "promptsBaseUrl",
               "type": "string"
             },
             "scriptBaseUrl": {
