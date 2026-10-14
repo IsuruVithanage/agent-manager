@@ -446,17 +446,22 @@ else
   FAILURES=$((FAILURES + 1))
 fi
 
-# Growth analytics (Moesif) is off unless enabled, and the Application ID is a
-# credential: it must reach the pod only from a Secret, never the ConfigMap,
-# and a misnamed Secret must not stop the API from starting.
+# Growth analytics (Moesif) is on by default in this SaaS-first codebase (it
+# exports nothing until a destination is configured) and can be switched off.
+# The Application ID is a credential: it must reach the pod only from a Secret,
+# never the ConfigMap, and a misnamed Secret must not stop the API from starting.
 GA=agentManagerService.config.growthAnalytics
 SECRET_TMPL=templates/agent-manager-service/secret.yaml
 CM_TMPL=templates/agent-manager-service/configmap.yaml
 
-assert_cm "analytics is off by default" MOESIF_ENABLED "false"
-assert_cm "console analytics is off by default" CONSOLE_ANALYTICS_ENABLED "false"
-assert_cm "deployment model defaults to on-prem" AMP_DEPLOYMENT_MODEL "on-prem"
-assert_cm "enabled reaches the ConfigMap" MOESIF_ENABLED "true" --set $GA.enabled=true
+assert_cm "analytics is on by default" MOESIF_ENABLED "true"
+assert_cm "console analytics is on by default" CONSOLE_ANALYTICS_ENABLED "true"
+assert_cm "deployment model defaults to saas" AMP_DEPLOYMENT_MODEL "saas"
+assert_cm "enabled=false reaches the ConfigMap" MOESIF_ENABLED "false" --set $GA.enabled=false
+assert_cm "consoleEnabled=false reaches the ConfigMap" CONSOLE_ANALYTICS_ENABLED "false" \
+  --set $GA.consoleEnabled=false
+assert_cm "deploymentModel can be overridden" AMP_DEPLOYMENT_MODEL "on-prem" \
+  --set $GA.deploymentModel=on-prem
 
 # assert_render <label> <template> <want: present|absent> <pattern> [helm --set args...]
 assert_render() {
@@ -479,7 +484,7 @@ assert_render() {
 
 assert_render "no Application ID env by default" "$API_TMPL" absent 'name: MOESIF_APPLICATION_ID'
 assert_render "no Application ID env while analytics is disabled" "$API_TMPL" absent \
-  'name: MOESIF_APPLICATION_ID' --set $GA.existingSecret=moesif-ext
+  'name: MOESIF_APPLICATION_ID' --set $GA.enabled=false --set $GA.existingSecret=moesif-ext
 assert_render "an inline Application ID is stored in the chart Secret" "$SECRET_TMPL" present \
   'moesif-application-id: "app-id-123"' --set $GA.applicationId=app-id-123
 assert_render "an inline Application ID never reaches the ConfigMap" "$CM_TMPL" absent \

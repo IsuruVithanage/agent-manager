@@ -18,12 +18,8 @@
 
 import { globalConfig } from '../config';
 
-/**
- * Request body cap used when MAX_REQUEST_BODY_BYTES is unset: 0, no limit.
- * Deployments behind a WAF with a body limit set it (e.g. 57344, 56 KB, under
- * a 64 KB WAF limit) so an oversized save is refused with a readable error.
- */
-export const DEFAULT_MAX_REQUEST_BODY_BYTES = 0;
+/** Request body cap used when MAX_REQUEST_BODY_BYTES is unset: 56 KB, under a 64 KB WAF limit. */
+export const DEFAULT_MAX_REQUEST_BODY_BYTES = 56 * 1024;
 
 /**
  * Share of the request-body limit reserved for everything in a save other
@@ -37,9 +33,8 @@ export const DEFAULT_FILE_MOUNT_MAX_FILE_BYTES = 1_000_000;
 /**
  * Parses a byte limit from runtime config. The template substitutes an unset
  * variable with an empty string, which means "use the default". Anything else
- * that is not a non-negative integer also falls back, with a warning: for the
- * request-body limit the default is no limit, so a mistyped value would
- * otherwise switch the check off without any sign.
+ * that is not a non-negative integer also falls back, with a warning, so a
+ * mistyped value is not silently swallowed.
  */
 const readByteLimit = (
   name: string,
@@ -58,8 +53,7 @@ const readByteLimit = (
 
 /**
  * Largest request body, in bytes, the console sends on a write. 0 means no
- * limit, which is the default; a deployment turns the check on by setting
- * MAX_REQUEST_BODY_BYTES.
+ * limit. Configured per deployment with MAX_REQUEST_BODY_BYTES.
  */
 export const getMaxRequestBodyBytes = (): number =>
   readByteLimit(

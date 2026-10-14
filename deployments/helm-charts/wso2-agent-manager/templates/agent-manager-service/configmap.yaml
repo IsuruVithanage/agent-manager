@@ -54,11 +54,11 @@ data:
   OAUTH_SCOPES_SUPPORTED: {{ .Values.agentManagerService.config.oauthScopesSupported | default "" | quote }}
   IS_ON_PREM_DEPLOYMENT: {{ .Values.agentManagerService.config.isOnPremDeployment | quote }}
   {{- with .Values.agentManagerService.config.growthAnalytics }}
-  MOESIF_ENABLED: {{ .enabled | default false | quote }}
-  CONSOLE_ANALYTICS_ENABLED: {{ .consoleEnabled | default false | quote }}
+  MOESIF_ENABLED: {{ dig "enabled" true . | quote }}
+  CONSOLE_ANALYTICS_ENABLED: {{ dig "consoleEnabled" true . | quote }}
   MOESIF_COLLECTOR_BASE_URL: {{ .collectorBaseURL | default "" | quote }}
   MOESIF_COLLECTOR_HOST_HEADER: {{ .collectorHostHeader | default "" | quote }}
-  AMP_DEPLOYMENT_MODEL: {{ .deploymentModel | default "on-prem" | quote }}
+  AMP_DEPLOYMENT_MODEL: {{ .deploymentModel | default "saas" | quote }}
   AMP_ENVIRONMENT: {{ .environment | default "" | quote }}
   {{- end }}
   IDP_TOKEN_URL: {{ .Values.agentManagerService.config.oidc.tokenUrl | quote }}

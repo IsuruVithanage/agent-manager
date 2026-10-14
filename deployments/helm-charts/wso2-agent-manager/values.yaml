@@ -310,12 +310,14 @@ agentManagerService:
       existingSecretKey: "github-token"
 
     # Growth analytics: feature-usage events and console actions sent to
-    # Moesif. Off unless enabled is true.
+    # Moesif. This codebase is SaaS/cloud-first, so both switches default to
+    # on; nothing is exported until a destination is configured (a collector
+    # URL or an application ID). Set enabled to false to turn it all off.
     growthAnalytics:
       # Master switch (MOESIF_ENABLED).
-      enabled: false
+      enabled: true
       # Console UI action stream; also needs enabled (CONSOLE_ANALYTICS_ENABLED).
-      consoleEnabled: false
+      consoleEnabled: true
       # Events endpoint base URL (a collector proxy or Moesif itself). Leave
       # empty with an application ID to send
       # straight to https://api.moesif.net; must be https for a remote host
@@ -329,7 +331,7 @@ agentManagerService:
       existingSecret: ""
       existingSecretKey: "moesif-application-id"
       # Reported on each event as deployment_model / environment.
-      deploymentModel: "on-prem"
+      deploymentModel: "saas"
       environment: ""
     
     # OpenChoreo API configuration
@@ -590,15 +592,16 @@ console:
     # override both (see deployments/vm/lib-vm.sh).
     idpHostBaseDomain: "amp.localhost"
     tlsEnabled: "false"
-    # Largest request body, in bytes, the console sends on a save. 0 means no
-    # limit (the default). Set it on deployments behind a WAF that rejects bigger
-    # bodies with an opaque 403, e.g. 57344 (56 KB) under a 64 KB WAF limit, so
-    # the console refuses first with a readable error.
-    maxRequestBodyBytes: 0
+    # Largest request body, in bytes, the console sends on a save. Bigger saves
+    # are refused with a readable error instead of reaching a WAF that would
+    # reject them with an opaque 403. The default suits a 64 KB WAF body limit;
+    # set 0 on deployments with no such limit.
+    maxRequestBodyBytes: 57344
     # Per-file cap, in bytes, on file-mount content in the console. 0 uses
     # agentManagerService.config.fileMountLimits.maxFileBytes, keeping the two in step.
-    # When maxRequestBodyBytes is set, the console also holds it under that value
-    # (less 8 KB for the rest of the save), e.g. 48 KB with a 56 KB limit.
+    # The console also holds it under maxRequestBodyBytes (less 8 KB for the rest
+    # of the save), so with the defaults the effective cap is 48 KB; set
+    # maxRequestBodyBytes to 0 to allow files up to this value.
     fileMountMaxFileBytes: 0
     # Guardrails catalog URL for fetching available guardrail policies
     guardrailsCatalogUrl: "https://db720294-98fd-40f4-85a1-cc6a3b65bc9a-prod.e1-us-east-azure.choreoapis.dev/api-platform/policy-hub-api/policy-hub-public/v1.0/policies?categories=AI,Guardrails&limit=50"

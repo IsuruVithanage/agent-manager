@@ -23,18 +23,6 @@ export interface ConfirmationEvent {
     | "info"
     | "success";
   confirmButtonText?: string;
-  /**
-   * Optional analytics labels for this confirmation. Without them the
-   * cancellation is still counted, just labelled from confirmButtonText — the
-   * dialog's title and description are never reported, since they interpolate
-   * resource names.
-   */
-  analytics?: {
-    /** What is being acted on, e.g. "llm-provider", "agent", "pipeline". */
-    entity: string;
-    /** The action being confirmed, e.g. "delete", "undeploy". */
-    action: string;
-  };
   cancelButtonText?: string;
   /**
    * Optional analytics labels for this confirmation. Without them the
