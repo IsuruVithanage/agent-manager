@@ -54,6 +54,8 @@ type Config struct {
 	// Default Chat API configuration
 	DefaultChatAPI     DefaultChatAPIConfig
 	DefaultGatewayPort int
+	// A2ACardFetchDialAddr, when set, is the host:port every platform card fetch dials instead of its URL host.
+	A2ACardFetchDialAddr string
 
 	// JWT Signing configuration for agent API tokens
 	JWTSigning JWTSigningConfig
@@ -63,8 +65,9 @@ type Config struct {
 	ServerPublicURL          string
 
 	// GrowthAnalytics configures feature-usage telemetry export. A no-op
-	// unless MoesifCollectorBaseURL is set — this codebase has no separate
-	// on-prem build to guard against, so IsOnPremDeployment isn't consulted.
+	// unless GrowthAnalytics.Enabled is true and MoesifCollectorBaseURL is
+	// set (Enabled defaults to true in this build, so in practice the base URL
+	// decides); IsOnPremDeployment isn't consulted.
 	GrowthAnalytics GrowthAnalyticsConfig
 
 	// ThunderHostBaseDomain is the domain suffix env-Thunder's developer-facing
@@ -360,13 +363,17 @@ type ObserverConfig struct {
 	PublicURL string
 }
 
-// GrowthAnalyticsConfig configures feature-usage telemetry export via the
-// moesif-collector-api OpenChoreo proxy component, which authenticates
-// callers with a platform-idp JWT and forwards to Moesif, injecting the real
-// Moesif Application ID server-side (callers never see it). There is no
-// credential here: middleware/growthanalytics authenticates each event to
-// the proxy using the JWT already on the request being tracked (the same
-// token the caller authenticated to this service with), not a config value.
+// GrowthAnalyticsConfig configures feature-usage telemetry export to Moesif.
+// Two ways to authenticate:
+//   - MoesifApplicationID set: events go to MoesifCollectorBaseURL (default
+//     https://api.moesif.net) with the X-Moesif-Application-Id header. This is
+//     how a deployment reports to its own Moesif account or proxy.
+//   - MoesifApplicationID empty: events go to a collector proxy that accepts
+//     the caller's own bearer JWT (the one already on the tracked request) and
+//     injects the Application ID server-side, as WSO2 Cloud's moesif-collector-api
+//     OpenChoreo proxy does. This is the mode the SaaS deployment uses: no
+//     credential lives in config, and every event is attributable to the real
+//     caller.
 type GrowthAnalyticsConfig struct {
 	// Enabled is the operational on/off switch for telemetry export, held
 	// separately from MoesifCollectorBaseURL so reporting can be turned off
@@ -387,12 +394,13 @@ type GrowthAnalyticsConfig struct {
 	// ConsoleEnabled and MoesifCollectorBaseURL all set. MOESIF_ENABLED=false
 	// still means "this deployment reports nothing to Moesif".
 	ConsoleEnabled bool
-	// MoesifCollectorBaseURL is the proxy's base URL, e.g.
-	// "http://development-wso2cloud.gateway-internal.openchoreo-data-plane:8080/moesif-collector"
-	// in-cluster, or "http://localhost:18080/moesif-collector" for local dev
-	// through a `kubectl port-forward` of the internal gateway. Empty
-	// disables telemetry export entirely — the middleware/growthanalytics
-	// package no-ops when this is unset.
+	// MoesifCollectorBaseURL is where events are POSTed: a collector proxy
+	// (e.g. "http://development-wso2cloud.gateway-internal.openchoreo-data-plane:8080/moesif-collector"
+	// in-cluster, or "http://localhost:18080/moesif-collector" through a
+	// `kubectl port-forward` of the internal gateway) or Moesif itself. When
+	// MoesifApplicationID is set and this is empty, the loader defaults it to
+	// https://api.moesif.net. Empty after loading disables telemetry export;
+	// middleware/growthanalytics no-ops.
 	MoesifCollectorBaseURL string
 	// MoesifCollectorHostHeader overrides the outgoing Host header sent to
 	// the proxy. Required only for local dev through a port-forward, where
@@ -400,12 +408,16 @@ type GrowthAnalyticsConfig struct {
 	// real virtual-host name. Leave empty when MoesifCollectorBaseURL's own
 	// host is already the real vhost (i.e. reached directly in-cluster).
 	MoesifCollectorHostHeader string
+	// MoesifApplicationID is the Moesif Application ID (MOESIF_APPLICATION_ID).
+	// When set, it replaces the caller's JWT as the credential on every send.
+	// A secret: supply it from a secret store and never log it.
+	MoesifApplicationID string
 	// DeploymentModel is reported as every event's "deployment_model"
 	// metadata field. Defaults to "saas" because that is the only shape this
-	// is deployed in today, but it is read from config rather than compiled
-	// in so a non-cloud deployment that does enable export (this repo still
-	// ships docker-compose and VM paths) labels its events honestly instead
-	// of claiming to be SaaS.
+	// build is deployed in by default, but it is read from config rather than
+	// compiled in so a non-cloud deployment that does enable export (this repo
+	// still ships docker-compose and VM paths) labels its events honestly
+	// instead of claiming to be SaaS, by setting AMP_DEPLOYMENT_MODEL=on-prem.
 	DeploymentModel string
 	// Environment names the deployment environment (e.g. "development",
 	// "production") this instance runs in, reported as every event's

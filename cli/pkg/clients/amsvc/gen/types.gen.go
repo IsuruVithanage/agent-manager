@@ -30,6 +30,45 @@ func (e APIKeySecurityIn) Valid() bool {
 	}
 }
 
+// Defines values for AgentCardResponseSource.
+const (
+	AgentCardResponseSourceExternal AgentCardResponseSource = "external"
+	AgentCardResponseSourcePlatform AgentCardResponseSource = "platform"
+)
+
+// Valid indicates whether the value is a known member of the AgentCardResponseSource enum.
+func (e AgentCardResponseSource) Valid() bool {
+	switch e {
+	case AgentCardResponseSourceExternal:
+		return true
+	case AgentCardResponseSourcePlatform:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AgentCardResponseStatus.
+const (
+	AgentCardResponseStatusFailed  AgentCardResponseStatus = "failed"
+	AgentCardResponseStatusFetched AgentCardResponseStatus = "fetched"
+	AgentCardResponseStatusPending AgentCardResponseStatus = "pending"
+)
+
+// Valid indicates whether the value is a known member of the AgentCardResponseStatus enum.
+func (e AgentCardResponseStatus) Valid() bool {
+	switch e {
+	case AgentCardResponseStatusFailed:
+		return true
+	case AgentCardResponseStatusFetched:
+		return true
+	case AgentCardResponseStatusPending:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AgentIdentityAssignmentEntryType.
 const (
 	AgentIdentityAssignmentEntryTypeAgent AgentIdentityAssignmentEntryType = "agent"
@@ -845,16 +884,16 @@ func (e LogEntryLogLevel) Valid() bool {
 
 // Defines values for MCPEndpointEnvironmentDeploymentStatus.
 const (
-	Deployed   MCPEndpointEnvironmentDeploymentStatus = "Deployed"
-	Undeployed MCPEndpointEnvironmentDeploymentStatus = "Undeployed"
+	MCPEndpointEnvironmentDeploymentStatusDeployed   MCPEndpointEnvironmentDeploymentStatus = "Deployed"
+	MCPEndpointEnvironmentDeploymentStatusUndeployed MCPEndpointEnvironmentDeploymentStatus = "Undeployed"
 )
 
 // Valid indicates whether the value is a known member of the MCPEndpointEnvironmentDeploymentStatus enum.
 func (e MCPEndpointEnvironmentDeploymentStatus) Valid() bool {
 	switch e {
-	case Deployed:
+	case MCPEndpointEnvironmentDeploymentStatusDeployed:
 		return true
-	case Undeployed:
+	case MCPEndpointEnvironmentDeploymentStatusUndeployed:
 		return true
 	default:
 		return false
@@ -1286,6 +1325,33 @@ type AgentCardCORSConfig struct {
 	// Inherit When true the card follows the agent's CORS: enabled when agent CORS is, with the agent's origins and credentials setting and Content-Type as the only header. On a request, true clears any stored override and the other fields are ignored. On a response, the other fields hold the effective values.
 	Inherit *bool `json:"inherit,omitempty"`
 }
+
+// AgentCardResponse An A2A agent's stored public agent card for one environment, and the state of its fetch.
+type AgentCardResponse struct {
+	// Card The last good card, as returned by the agent. Absent until the first successful fetch.
+	Card *map[string]interface{} `json:"card,omitempty"`
+
+	// FetchedAt Time of the last successful fetch. Absent until then.
+	FetchedAt *time.Time `json:"fetchedAt,omitempty"`
+
+	// LastError Why the last attempt failed; empty after a success.
+	LastError string `json:"lastError"`
+
+	// Source platform cards are fetched through the environment's gateway; external cards from a registered URL.
+	Source AgentCardResponseSource `json:"source"`
+
+	// SourceUrl The registered URL (external) or the URL last fetched (platform).
+	SourceUrl string `json:"sourceUrl"`
+
+	// Status pending while a fetch is due or retrying; failed once the retry budget ran out.
+	Status AgentCardResponseStatus `json:"status"`
+}
+
+// AgentCardResponseSource platform cards are fetched through the environment's gateway; external cards from a registered URL.
+type AgentCardResponseSource string
+
+// AgentCardResponseStatus pending while a fetch is due or retrying; failed once the retry budget ran out.
+type AgentCardResponseStatus string
 
 // AgentCreatedBy The user who created this agent. Resolved from an audit-only
 // requester id captured at creation time, so it is best-effort and
@@ -2045,6 +2111,12 @@ type CommitAuthor struct {
 
 // ConfigResponse defines model for ConfigResponse.
 type ConfigResponse struct {
+	// ConsoleAnalyticsEnabled Whether this deployment accepts console usage analytics. The
+	// console buffers and sends nothing when false, so CONSOLE_ANALYTICS_ENABLED
+	// on the service is the single switch for the whole path rather than
+	// one half of it. Absent is treated as false.
+	ConsoleAnalyticsEnabled *bool `json:"consoleAnalyticsEnabled,omitempty"`
+
 	// ObserverBaseUrl Base URL for the agent-manager-observer service
 	ObserverBaseUrl string `json:"observerBaseUrl"`
 }
@@ -2142,6 +2214,56 @@ type Configurations struct {
 
 	// ResilienceTimeoutSeconds Max duration (seconds) the gateway keeps a response open between the agent and the client before cutting it off, for this agent's endpoint in this environment. Defaults to 30 seconds when unset.
 	ResilienceTimeoutSeconds *int `json:"resilienceTimeoutSeconds,omitempty"`
+}
+
+// ConsoleAction One thing a user did in the console UI.
+type ConsoleAction struct {
+	// Action Action name from the console taxonomy, e.g.
+	// "amp.console.navigation.page-view". Validated against a
+	// server-side allowlist; an unrecognized name is dropped.
+	Action string `json:"action"`
+
+	// Dimensions Taxonomy dimensions for this action, e.g. {"entity": "agent"}.
+	// Keys are validated per action against the server-side allowlist;
+	// unknown keys are dropped. Values must be scalars — never request
+	// bodies, secrets, or free-form user input.
+	Dimensions *map[string]interface{} `json:"dimensions,omitempty"`
+
+	// OccurredAt When the user did this, per the browser clock. The server uses it
+	// as-is so the ordering within a buffered flush survives, and falls
+	// back to receipt time when it is absent. A value present but not
+	// RFC 3339 fails decoding and makes the whole batch malformed (400)
+	// — the client controls this field, so a bad value is a client bug
+	// worth surfacing rather than silently rewriting.
+	OccurredAt *time.Time `json:"occurredAt,omitempty"`
+
+	// Page The console route the action happened on, e.g.
+	// "/orgs/acme/projects/p1/agents/a1/deploy". Path only — the client
+	// must not send query strings, which can carry identifiers.
+	Page *string `json:"page,omitempty"`
+
+	// SessionId Opaque per-tab identifier generated by the console, used to group
+	// an individual browsing session. Not a credential and not derived
+	// from one.
+	SessionId *string `json:"sessionId,omitempty"`
+}
+
+// ConsoleActionBatchRequest A flush of console actions buffered by the browser.
+type ConsoleActionBatchRequest struct {
+	// Actions The buffered actions, oldest first. Capped so a single flush cannot
+	// be used to push an unbounded payload through to the collector.
+	Actions []ConsoleAction `json:"actions"`
+}
+
+// ConsoleActionBatchResponse How much of the submitted batch survived validation.
+type ConsoleActionBatchResponse struct {
+	// Accepted Number of actions forwarded to the collector.
+	Accepted int `json:"accepted"`
+
+	// Dropped Number of actions discarded for failing the allowlist. Reported so
+	// a console release that starts emitting an unregistered action is
+	// visible without reading service logs.
+	Dropped int `json:"dropped"`
 }
 
 // CostRateLimit defines model for CostRateLimit.
@@ -4868,6 +4990,12 @@ type SecuritySummary struct {
 	Enabled *bool `json:"enabled,omitempty"`
 }
 
+// SetAgentCardSourceRequest defines model for SetAgentCardSourceRequest.
+type SetAgentCardSourceRequest struct {
+	// Url Public http(s) URL of the agent card, normally ending in /.well-known/agent-card.json.
+	Url string `json:"url"`
+}
+
 // StoredAPIKey defines model for StoredAPIKey.
 type StoredAPIKey struct {
 	// ArtifactUuid UUID of the artifact this key is bound to.
@@ -6125,6 +6253,9 @@ type DeployAgentJSONRequestBody = DeployAgentRequest
 // UpdateAgentDeploymentStateJSONRequestBody defines body for UpdateAgentDeploymentState for application/json ContentType.
 type UpdateAgentDeploymentStateJSONRequestBody = UpdateDeploymentStateRequest
 
+// SetAgentCardSourceJSONRequestBody defines body for SetAgentCardSource for application/json ContentType.
+type SetAgentCardSourceJSONRequestBody = SetAgentCardSourceRequest
+
 // CreateAgentAPIKeyJSONRequestBody defines body for CreateAgentAPIKey for application/json ContentType.
 type CreateAgentAPIKeyJSONRequestBody = CreateLLMAPIKeyRequest
 
@@ -6202,6 +6333,9 @@ type ListRepositoryCommitsJSONRequestBody = ListCommitsRequest
 
 // GetNameByDisplayNameJSONRequestBody defines body for GetNameByDisplayName for application/json ContentType.
 type GetNameByDisplayNameJSONRequestBody = ResourceNameRequest
+
+// ReportConsoleActionsJSONRequestBody defines body for ReportConsoleActions for application/json ContentType.
+type ReportConsoleActionsJSONRequestBody = ConsoleActionBatchRequest
 
 // AsBuildpackBuild returns the union data inside the Build as a BuildpackBuild
 func (t Build) AsBuildpackBuild() (BuildpackBuild, error) {

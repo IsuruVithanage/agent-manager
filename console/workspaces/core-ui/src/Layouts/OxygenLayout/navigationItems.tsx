@@ -18,24 +18,30 @@
 
 import { useMemo } from "react";
 import {
-  BarChart3 as AutoGraphOutlined,
-  Binoculars as ObservabilityOutline,
-  Settings2 as EvaluationOutline,
+  ClipboardCheck as EvaluationOutline,
   Settings,
   Home,
-  Wrench,
+  Hammer,
   FlaskConical,
   Workflow,
   Logs,
   Rocket,
   Code,
-  MonitorCheck,
   BrainCircuit,
-  BookOpenText,
-  DoorClosedLocked,
-  ServerCrash,
   Server,
   ShieldCheck,
+  Boxes,
+  Network,
+  GitBranch,
+  Lock,
+  LayoutDashboard,
+  Box,
+  BookOpenText,
+  Megaphone,
+  Activity,
+  Gauge,
+  Layers,
+  MonitorCheck,
 } from "@wso2/oxygen-ui-icons-react";
 import {
   generatePath,
@@ -252,7 +258,8 @@ export function useNavigationItems(): Array<
         {
           title: "Security",
           type: "section",
-          icon: <ShieldCheck />,
+          icon: <Lock />,
+          collapsible: true,
           items: agentSecurityItems,
         },
       ]
@@ -281,7 +288,7 @@ export function useNavigationItems(): Array<
       {
         label: "Overview",
         type: "item",
-        icon: <Home size={20} />,
+        icon: <LayoutDashboard size={20} />,
         isActive: !!matchPath(
           absoluteRouteMap.children.org.children.projects.children.agents.path,
           pathname,
@@ -303,7 +310,8 @@ export function useNavigationItems(): Array<
       {
         title: "Agent Lifecycle",
         type: "section",
-        icon: <Rocket />,
+        icon: <GitBranch />,
+        collapsible: true,
         items: [
           {
             label: "Configure",
@@ -329,7 +337,8 @@ export function useNavigationItems(): Array<
             {
               title: "Security",
               type: "section" as const,
-              icon: <ShieldCheck />,
+              icon: <Lock />,
+              collapsible: true,
               items: [
                 {
                   label: "Agent ID",
@@ -353,7 +362,8 @@ export function useNavigationItems(): Array<
       {
         title: "Observability",
         type: "section",
-        icon: <AutoGraphOutlined />,
+        icon: <Activity />,
+        collapsible: true,
         items: [
           {
             label: "Traces",
@@ -378,6 +388,7 @@ export function useNavigationItems(): Array<
         title: "Evaluation",
         type: "section",
         icon: <EvaluationOutline />,
+        collapsible: true,
         items: [
           {
             label: "Monitors",
@@ -406,7 +417,7 @@ export function useNavigationItems(): Array<
       {
         label: "Overview",
         type: "item",
-        icon: <Home size={20} />,
+        icon: <LayoutDashboard size={20} />,
         isActive: !!matchPath(
           absoluteRouteMap.children.org.children.projects.children.agents.path,
           pathname,
@@ -419,7 +430,8 @@ export function useNavigationItems(): Array<
       {
         title: "Agent Lifecycle",
         type: "section",
-        icon: <Rocket />,
+        icon: <GitBranch />,
+        collapsible: true,
         items: [
           {
             label: "Configure",
@@ -471,7 +483,8 @@ export function useNavigationItems(): Array<
       {
         title: "Observability",
         type: "section",
-        icon: <ObservabilityOutline />,
+        icon: <Activity />,
+        collapsible: true,
         items: [
           {
             label: "Traces",
@@ -509,7 +522,7 @@ export function useNavigationItems(): Array<
           {
             label: "System Metrics",
             type: "item",
-            icon: <AutoGraphOutlined size={20} />,
+            icon: <Gauge size={20} />,
             isActive: !!matchPath(
               absoluteRouteMap.children.org.children.projects.children.agents
                 .children.environment.children.observability.children.metrics
@@ -529,6 +542,7 @@ export function useNavigationItems(): Array<
         title: "Evaluation",
         type: "section",
         icon: <EvaluationOutline />,
+        collapsible: true,
         items: [
           {
             label: "Monitors",
@@ -565,7 +579,7 @@ export function useNavigationItems(): Array<
       {
         label: "Overview",
         type: "item",
-        icon: <Home size={20} />,
+        icon: <LayoutDashboard size={20} />,
         isActive: !!matchPath(
           absoluteRouteMap.children.org.children.projects.children.agents.path,
           pathname,
@@ -578,7 +592,8 @@ export function useNavigationItems(): Array<
       {
         title: "Agent Lifecycle",
         type: "section",
-        icon: <Rocket />,
+        icon: <GitBranch />,
+        collapsible: true,
         items: [
           {
             label: "Configure",
@@ -597,7 +612,7 @@ export function useNavigationItems(): Array<
           {
             label: "Build",
             type: "item",
-            icon: <Wrench size={20} />,
+            icon: <Hammer size={20} />,
             isActive: !!matchPath(
               absoluteRouteMap.children.org.children.projects.children.agents
                 .children.build.wildPath,
@@ -642,7 +657,7 @@ export function useNavigationItems(): Array<
           {
             label: "Publish",
             type: "item",
-            icon: <BookOpenText size={20} />,
+            icon: <Megaphone size={20} />,
             isActive: !!matchPath(
               absoluteRouteMap.children.org.children.projects.children.agents
                 .children.publish.wildPath,
@@ -660,7 +675,8 @@ export function useNavigationItems(): Array<
       {
         title: "Observability",
         type: "section",
-        icon: <ObservabilityOutline />,
+        icon: <Activity />,
+        collapsible: true,
         items: [
           {
             label: "Traces",
@@ -698,7 +714,7 @@ export function useNavigationItems(): Array<
           {
             label: "System Metrics",
             type: "item",
-            icon: <AutoGraphOutlined size={20} />,
+            icon: <Gauge size={20} />,
             isActive: !!matchPath(
               absoluteRouteMap.children.org.children.projects.children.agents
                 .children.environment.children.observability.children.metrics
@@ -718,6 +734,7 @@ export function useNavigationItems(): Array<
         title: "Evaluation",
         type: "section",
         icon: <EvaluationOutline />,
+        collapsible: true,
         items: [
           {
             label: "Monitors",
@@ -776,7 +793,7 @@ export function useNavigationItems(): Array<
       {
         label: "Projects",
         type: "item",
-        icon: <Home size={20} />,
+        icon: <Box size={20} />,
         href: generatePath(absoluteRouteMap.children.org.path, { orgId }),
         isActive: !!matchPath(absoluteRouteMap.children.org.path, pathname),
       },
@@ -815,7 +832,8 @@ export function useNavigationItems(): Array<
             {
               type: "section" as const,
               title: "Resources",
-              icon: <Settings size={20} />,
+              icon: <Boxes size={20} />,
+              collapsible: true,
               items: [
                 {
                   label: "LLM Service Providers",
@@ -844,6 +862,7 @@ export function useNavigationItems(): Array<
               title: "Evaluation",
               type: "section" as const,
               icon: <EvaluationOutline />,
+              collapsible: true,
               items: [
                 {
                   label: "Evaluators",
@@ -861,19 +880,20 @@ export function useNavigationItems(): Array<
             {
               title: "Infrastructure",
               type: "section" as const,
-              icon: <DoorClosedLocked />,
+              icon: <Server />,
+              collapsible: true,
               items: [
                 {
                   label: "Gateways",
                   type: "item" as const,
-                  icon: <DoorClosedLocked size={20} />,
+                  icon: <Network size={20} />,
                   href: generatePath(gatewaysOrgRoute.path, { orgId }),
                   isActive: !!matchPath(gatewaysOrgRoute.wildPath, pathname),
                 },
                 {
                   label: "Environments",
                   type: "item" as const,
-                  icon: <Server size={20} />,
+                  icon: <Layers size={20} />,
                   href: generatePath(environmentsOrgRoute.path, { orgId }),
                   isActive: !!matchPath(
                     environmentsOrgRoute.wildPath,
@@ -883,7 +903,7 @@ export function useNavigationItems(): Array<
                 {
                   label: "Deployment Pipelines",
                   type: "item" as const,
-                  icon: <ServerCrash size={20} />,
+                  icon: <Workflow size={20} />,
                   href: generatePath(deploymentPipelinesOrgRoute.path, {
                     orgId,
                   }),
@@ -902,6 +922,7 @@ export function useNavigationItems(): Array<
               title: "Agent Identities",
               type: "section" as const,
               icon: <thunderInstancesMetadata.icon />,
+              collapsible: true,
               // Both children read the same agent-identity API, so one scope
               // governs both and there is nothing left to filter per item.
               items: (["groups", "roles"] as const).map((key) => {

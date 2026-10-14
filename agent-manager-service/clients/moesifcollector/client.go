@@ -30,8 +30,9 @@ import (
 	"github.com/wso2/agent-manager/agent-manager-service/clients/requests"
 )
 
-// Event is a single API-call event, in the shape the moesif-collector-api's
-// POST /v1/events operation expects. Metadata must stay top-level (a sibling
+// Event is a single API-call event, in the shape Moesif's Events API
+// (POST /v1/events) expects, whether sent directly or through a collector
+// proxy such as moesif-collector-api. Metadata must stay top-level (a sibling
 // of Request/Response) — nesting it inside Request silently fails to
 // populate Moesif's Metadata panel.
 type Event struct {
@@ -83,22 +84,25 @@ type ActionRequest struct {
 	UserAgentString string `json:"user_agent_string,omitempty"`
 }
 
-// Client posts events to a moesif-collector-api instance.
+// Client posts events to Moesif, either through a collector proxy or
+// directly to the Moesif API.
 type Client struct {
-	httpClient requests.HttpClient
-	baseURL    string
-	token      string
-	hostHeader string
+	httpClient    requests.HttpClient
+	baseURL       string
+	token         string
+	hostHeader    string
+	applicationID string
 }
 
 // NewClient builds a Client.
 //
 //   - baseURL is the proxy's base URL, e.g.
-//     "http://development-wso2cloud.gateway-internal.openchoreo-data-plane:8080/moesif-collector"
+//     "http://<collector-host>:<port>/<collector-path>"
 //     when reached directly inside the OpenChoreo data plane, or
 //     "http://localhost:18080/moesif-collector" for local dev through a
 //     `kubectl port-forward` of the internal gateway.
-//   - token is a bearer JWT issued by platform-idp. It's short-lived (~1h);
+//   - token is the caller's bearer JWT, used only when applicationID is empty
+//     (proxy mode); it may be empty otherwise. It's short-lived (~1h);
 //     the caller is responsible for keeping it fresh — this client does not
 //     retry on expiry.
 //   - hostHeader, if non-empty, overrides the outgoing Host header. Required
@@ -106,13 +110,29 @@ type Client struct {
 //     routes purely on Host and localhost doesn't match the real vhost
 //     name. Leave empty when baseURL's own host is already the real vhost
 //     (i.e. reached directly inside the data plane).
-func NewClient(httpClient requests.HttpClient, baseURL, token, hostHeader string) *Client {
+//   - applicationID, if non-empty, authenticates with Moesif's own
+//     X-Moesif-Application-Id header instead of the caller's bearer token.
+//     That is what lets a deployment report to its own Moesif account
+//     (baseURL "https://api.moesif.net") or to a proxy that accepts the
+//     header. The caller's JWT is then never sent.
+func NewClient(httpClient requests.HttpClient, baseURL, token, hostHeader, applicationID string) *Client {
 	return &Client{
-		httpClient: httpClient,
-		baseURL:    strings.TrimRight(baseURL, "/"),
-		token:      token,
-		hostHeader: hostHeader,
+		httpClient:    httpClient,
+		baseURL:       strings.TrimRight(baseURL, "/"),
+		token:         token,
+		hostHeader:    hostHeader,
+		applicationID: applicationID,
 	}
+}
+
+// setAuth applies exactly one credential: the Moesif Application ID when
+// configured, otherwise the caller's bearer token for the collector proxy.
+func (c *Client) setAuth(req *requests.HttpRequest) {
+	if c.applicationID != "" {
+		req.SetHeader("X-Moesif-Application-Id", c.applicationID)
+		return
+	}
+	req.SetHeader("Authorization", "Bearer "+c.token)
 }
 
 // SendEvent posts a single event to POST /v1/events.
@@ -123,7 +143,7 @@ func (c *Client) SendEvent(ctx context.Context, evt Event) error {
 		Method: http.MethodPost,
 	}
 	req.SetJson(evt)
-	req.SetHeader("Authorization", "Bearer "+c.token)
+	c.setAuth(req)
 	if c.hostHeader != "" {
 		req.SetHost(c.hostHeader)
 	}
@@ -156,7 +176,7 @@ func (c *Client) SendActions(ctx context.Context, actions []Action) error {
 		Method: http.MethodPost,
 	}
 	req.SetJson(actions)
-	req.SetHeader("Authorization", "Bearer "+c.token)
+	c.setAuth(req)
 	if c.hostHeader != "" {
 		req.SetHost(c.hostHeader)
 	}

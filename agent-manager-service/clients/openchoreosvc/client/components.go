@@ -50,12 +50,18 @@ func (c *openChoreoClient) CreateComponent(ctx context.Context, ouID, projectNam
 	}
 
 	if resp.StatusCode() != http.StatusCreated {
-		return handleErrorResponse(resp.StatusCode(), ErrorResponses{
+		return terminatingConflict(handleErrorResponse(resp.StatusCode(), ErrorResponses{
 			JSON400: resp.JSON400,
 			JSON401: resp.JSON401,
 			JSON403: resp.JSON403,
 			JSON409: resp.JSON409,
 			JSON500: resp.JSON500,
+		}), "component", req.Name, func() (*gen.ObjectMeta, error) {
+			getResp, getErr := c.ocClient.GetComponentWithResponse(ctx, namespaceName, req.Name)
+			if getErr != nil || getResp.JSON200 == nil {
+				return nil, getErr
+			}
+			return &getResp.JSON200.Metadata, nil
 		})
 	}
 	return nil
@@ -167,6 +173,10 @@ func buildExternalAgentComponentRequestBody(namespaceName, projectName string, r
 	}
 	labels := map[string]string{
 		string(LabelKeyProvisioningType): string(req.ProvisioningType),
+	}
+	// Only the subtype AMS acts on is labelled; other external subtypes stay free-form.
+	if utils.IsA2AAgentSubType(req.AgentType.SubType) {
+		labels[string(LabelKeyAgentSubType)] = req.AgentType.SubType
 	}
 	addUserLabels(labels, req.Labels)
 	componentTypeKind := gen.ComponentSpecComponentTypeKindComponentType
@@ -3131,9 +3141,7 @@ func convertComponentFromTyped(comp *gen.Component) (*models.AgentResponse, erro
 		Type:     componentTypeName,
 		Language: getLabel(comp.Metadata.Labels, string(LabelKeyAgentLanguage)),
 	}
-	if provisioningType == string(utils.InternalAgent) {
-		agentType.SubType = getLabel(comp.Metadata.Labels, string(LabelKeyAgentSubType))
-	}
+	agentType.SubType = getLabel(comp.Metadata.Labels, string(LabelKeyAgentSubType))
 
 	agent := &models.AgentResponse{
 		Name:        comp.Metadata.Name,

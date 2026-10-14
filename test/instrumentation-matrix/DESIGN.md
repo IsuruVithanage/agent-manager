@@ -980,12 +980,14 @@ Jobs:
    release-config). Gates the rest.
 2. `default-cell-required` — runs only the `defaultCell`. The required status
    check on the PR.
-3. `full-emission-matrix` — runs `nox -s emission` (every cell; advisory,
-   `continue-on-error`).
+3. `full-emission-matrix` — runs every cell, sharded into one parallel job
+   per Python version (`nox -s emission -- --python-version=<v>`); advisory,
+   `continue-on-error`.
 4. `publish-matrix-summary` — needs `full-emission-matrix` +
-   `default-cell-required`; aggregates `reports/cells/*.json` and renders the
-   summary table to the job's GitHub step-summary page (not a PR comment —
-   fork PRs get a read-only token that can't comment).
+   `default-cell-required`; merges the shard artifacts, aggregates
+   `reports/cells/*.json` and renders the summary table to the job's GitHub
+   step-summary page (not a PR comment — fork PRs get a read-only token that
+   can't comment).
 5. `scan-cassettes-for-secrets` — greps committed cassettes for leaked keys.
 
 A required check on `full-emission-matrix` overall would let a single advisory
@@ -1004,8 +1006,11 @@ on:
 Jobs:
 
 1. `full-emission-matrix` — same as tier 1 but ungated by file paths.
-2. `heavy-tier` — needs `full-emission-matrix`; builds AMP from source on
-   k3d (amp-dev-stack), iterates heavy cells, posts heavy-tier report.
+2. `heavy-tier` — needs `full-emission-matrix`; one shard per Traceloop
+   version (listed by `resolve-heavy-shards`, passed to the driver as
+   `HEAVY_PROVIDER_VERSION`). Each shard builds AMP from source on its own
+   k3d stack (amp-dev-stack), iterates its heavy cells, and uploads its
+   reports.
 3. `revalidate-known-broken` — re-runs every `known-broken` cell; opens an
    issue if any previously-broken cell now passes ("drop the exemption").
 4. `publish-matrix-summary` — aggregates emission + heavy reports, renders
@@ -1028,7 +1033,14 @@ on:
       python_versions:      { type: string, description: 'comma-separated; default = all' }
       include_heavy_tier:   { type: boolean, default: false }
       include_record_mode:  { type: boolean, default: false }   # re-record cassettes
+      heavy_only:           { type: boolean, default: false }   # skip emission
+      heavy_cell_id:        { type: string,  default: '' }      # one heavy cell
 ```
+
+The four filters narrow the heavy subset as well as the emission matrix
+(`harness/cell_filter.py`). The heavy tier is sharded per Traceloop version
+like the nightly's, so `traceloop_versions=<new>` runs one ~50-minute shard
+rather than the whole subset.
 
 `include_record_mode` runs with `VCR_RECORD_MODE=once`, uses an
 OPENAI/ANTHROPIC key from a CI secret, and opens a follow-up PR with the
@@ -1209,7 +1221,8 @@ test/instrumentation-matrix/
 ├── scripts/
 │   ├── record_cassette.py                 # one-shot cassette recorder (§7.4)
 │   ├── scrub_cassettes.py                 # strip identifying headers post-record
-│   └── expand_filter.py                   # cell-id filter for the manual workflow
+│   ├── expand_filter.py                   # cell-id filter for the manual workflow
+│   └── resolve_heavy_shards.py            # per-Traceloop heavy shards (nightly + manual)
 └── reports/                               # per-run output (gitignored)
 
 .github/
