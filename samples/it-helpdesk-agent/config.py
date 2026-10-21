@@ -3,6 +3,12 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
+# Model used when LLM_MODEL is not set, per MODEL_PROVIDER.
+DEFAULT_MODELS = {
+    "openai": "gpt-4o-mini",
+    "anthropic": "claude-haiku-5-5",
+}
+
 
 def _env(name: str, default: str | None = None) -> str:
     val = os.environ.get(name, default)
@@ -18,6 +24,8 @@ class Config:
     max_tickets_per_query: int
     additional_guidance: str
     agent_version: str
+    model_provider: str
+    model: str
     use_llm_provider: bool
     llm_provider_url: str
     llm_provider_key: str
@@ -48,6 +56,16 @@ class Config:
             raise RuntimeError(
                 f"MAX_TICKETS_PER_QUERY must be an integer, got: {raw_max_tickets!r}"
             ) from None
+
+        # Which API the model is reached through. With USE_LLM_PROVIDER=true it
+        # must match the vendor of the AM LLM provider the agent is attached to.
+        model_provider = _env("MODEL_PROVIDER", "openai").strip().lower() or "openai"
+        if model_provider not in DEFAULT_MODELS:
+            raise RuntimeError(
+                f"MODEL_PROVIDER must be one of {', '.join(DEFAULT_MODELS)}, "
+                f"got: {model_provider!r}"
+            )
+        model = _env("LLM_MODEL", "").strip() or DEFAULT_MODELS[model_provider]
 
         use_llm_provider = _env("USE_LLM_PROVIDER", "false").lower() == "true"
         llm_provider_url = _env("LLM_PROVIDER_URL", "")
@@ -103,6 +121,8 @@ class Config:
             # Echoed in /health and every chat response so a promotion or a
             # rollback is visible from the outside without reading the console.
             agent_version=_env("AGENT_VERSION", "dev"),
+            model_provider=model_provider,
+            model=model,
             use_llm_provider=use_llm_provider,
             llm_provider_url=llm_provider_url,
             llm_provider_key=llm_provider_key,

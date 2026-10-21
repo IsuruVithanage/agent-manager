@@ -3,7 +3,8 @@
 Builds a ReAct-style agent bound to the instance config.
 
 When ``USE_LLM_PROVIDER=true``, requests are routed through the AM LLM
-provider (which applies guardrails). Otherwise calls OpenAI directly.
+provider (which applies guardrails). Otherwise calls the vendor directly.
+``MODEL_PROVIDER`` (openai or anthropic) and ``LLM_MODEL`` pick the model.
 
 When ``USE_MCP=true``, tools discovered from an AM MCP proxy are merged with
 the in-process tools. When it is off, the agent is exactly the v1 agent.
@@ -25,8 +26,6 @@ from config import Config
 from tools import build_tools
 
 log = logging.getLogger("it-helpdesk")
-
-MODEL = "gpt-4o-mini"
 
 SYSTEM_PROMPT_TEMPLATE = (
     "You are an IT helpdesk agent for {company_name}. "
@@ -129,10 +128,31 @@ async def load_mcp_tools(cfg: Config) -> list[Any]:
     return list(await client.get_tools())
 
 
-def build_agent(cfg: Config, mcp_tools: list[Any] | None = None) -> Any:
+def build_llm(cfg: Config) -> Any:
+    """Chat model for ``MODEL_PROVIDER``.
+
+    An AM LLM provider proxies the upstream vendor's own API, so the client must
+    match the vendor: an OpenAI provider takes Chat Completions, an Anthropic
+    provider takes the Messages API. The gateway authenticates the agent by the
+    ``API-Key`` header and injects the upstream credential itself.
+    """
+    if cfg.model_provider == "anthropic":
+        # Imported here so an OpenAI-only deployment never loads it.
+        from langchain_anthropic import ChatAnthropic
+
+        # No temperature: current Claude models reject non-default values.
+        if cfg.use_llm_provider:
+            return ChatAnthropic(
+                model=cfg.model,
+                base_url=cfg.llm_provider_url,
+                api_key="not-used",
+                default_headers={"API-Key": cfg.llm_provider_key},
+            )
+        return ChatAnthropic(model=cfg.model)
+
     if cfg.use_llm_provider:
-        llm = ChatOpenAI(
-            model=MODEL,
+        return ChatOpenAI(
+            model=cfg.model,
             temperature=0,
             base_url=cfg.llm_provider_url,
             api_key="not-used",
@@ -141,8 +161,11 @@ def build_agent(cfg: Config, mcp_tools: list[Any] | None = None) -> Any:
                 "Authorization": "",
             },
         )
-    else:
-        llm = ChatOpenAI(model=MODEL, temperature=0)
+    return ChatOpenAI(model=cfg.model, temperature=0)
+
+
+def build_agent(cfg: Config, mcp_tools: list[Any] | None = None) -> Any:
+    llm = build_llm(cfg)
 
     tools = build_tools(cfg) + list(mcp_tools or [])
     system_prompt = SYSTEM_PROMPT_TEMPLATE.format(

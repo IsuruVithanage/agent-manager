@@ -28,7 +28,10 @@ All configuration is environment variables. Only the LLM credential is required.
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `OPENAI_API_KEY` | — | Required unless `USE_LLM_PROVIDER=true` |
+| `OPENAI_API_KEY` | — | Required when `MODEL_PROVIDER=openai` and `USE_LLM_PROVIDER=false` |
+| `ANTHROPIC_API_KEY` | — | Required when `MODEL_PROVIDER=anthropic` and `USE_LLM_PROVIDER=false` |
+| `MODEL_PROVIDER` | `openai` | `openai` or `anthropic`. With `USE_LLM_PROVIDER=true` it must match the vendor of the attached LLM Service Provider, because the provider passes requests through in that vendor's API format |
+| `LLM_MODEL` | `gpt-4o-mini` (openai), `claude-haiku-5-5` (anthropic) | Chat model to call. Must be one the provider serves |
 | `COMPANY_NAME` | `AcmeCorp` | Used in the system prompt |
 | `TONE` | `professional and helpful` | Used in the system prompt |
 | `ADDITIONAL_GUIDANCE` | *(empty)* | Extra prompt text appended verbatim |
