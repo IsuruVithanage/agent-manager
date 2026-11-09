@@ -47,6 +47,10 @@ Add the following environment variables in the create form:
 OPENAI_API_KEY=<your-openai-api-key>
 ```
 
+The agent uses the model `qwen3-fastchat` by default. To use another model, add
+`LLM_MODEL=<model name>`. The name must be one the LLM lists at `/v1/models`, and
+the model must support tool calls.
+
 ### Step 5: Deploy the Agent
 
 1. Review all configuration details

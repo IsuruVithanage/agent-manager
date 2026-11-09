@@ -7,6 +7,7 @@ provider (which applies guardrails). Otherwise calls OpenAI directly.
 
 from __future__ import annotations
 
+import os
 from typing import Any
 
 from langchain_openai import ChatOpenAI
@@ -15,7 +16,9 @@ from langgraph.prebuilt import create_react_agent
 from config import Config
 from tools import build_tools
 
-MODEL = "gpt-4o-mini"
+# The model name must exist on the LLM behind the provider. The default is a
+# model on Digital Dubai's LiteLLM; set LLM_MODEL to use another one.
+MODEL = os.environ.get("LLM_MODEL", "qwen3-fastchat")
 
 SYSTEM_PROMPT_TEMPLATE = (
     "You are an IT helpdesk agent for {company_name}. "
